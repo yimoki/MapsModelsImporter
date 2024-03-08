@@ -371,4 +371,4 @@ def filesToBlender(context, prefix, max_blocks=200, use_experimental=False, glob
 def importCapture(context, filepath, max_blocks, use_experimental, pref):
     prefix = makeTmpDir(pref, filepath)
     captureToFiles(context, filepath, prefix, max_blocks, use_experimental)
-    filesToBlender(context, prefix, max_blocks, use_experimental)
+    # filesToBlender(context, prefix, max_blocks, use_experimental)

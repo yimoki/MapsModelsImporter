@@ -38,6 +38,10 @@ import struct
 import numpy as np
 
 try:
+    import os
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    rdc_path = os.path.join(dir_path, "bin/win64")
+    sys.path.append(rdc_path)
     import renderdoc as rd
 except ModuleNotFoundError as err:
     print("Error: Can't find the RenderDoc Module.")
@@ -57,8 +61,15 @@ from meshdata import MeshData, makeMeshData
 from profiling import Timer, profiling_counters
 from rdutils import CaptureWrapper
 
-_, CAPTURE_FILE, FILEPREFIX, MAX_BLOCKS_STR = sys.argv[:4]
+#单文件测试用变量
+CAPTURE_FILE = 'D:\\Github\\example\\CapeTown-RD_1.13.rdc'
+FILEPREFIX = 'D:\\Github\\example\\CapeTown-RD_1.13-xngd4ps\\CapeTown-RD_1.13-'
+MAX_BLOCKS_STR = -1
+
+#_, CAPTURE_FILE, FILEPREFIX, MAX_BLOCKS_STR = sys.argv[:4]
 MAX_BLOCKS = int(MAX_BLOCKS_STR)
+
+
 
 def numpySave(array, file):
     np.array([array.ndim], dtype=np.int32).tofile(file)

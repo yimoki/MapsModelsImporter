@@ -30,6 +30,7 @@ class CaptureWrapper():
         
     def __enter__(self):
         self.cap = rd.OpenCaptureFile()
+        print(self.cap.__dir__())
         status = self.cap.OpenFile(self.filename, '', None)
 
         if not status.OK():

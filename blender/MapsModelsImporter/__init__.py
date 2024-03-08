@@ -22,7 +22,7 @@
 # from Maps services
 
 bl_info = {
-    "name": "Maps Models Importer",
+    "name": "RenderDoc Importer",
     "author": "Elie Michel",
     "version": (0, 6, 3),
     "blender": (3, 1, 0),
@@ -39,12 +39,14 @@ from . import operators
 from . import panels
 
 def register():
+    print("Registering MapsModelsImporter")
     preferences.register()
     properties.register()
     operators.register()
     panels.register()
 
 def unregister():
+    print("Unregistering MapsModelsImporter")
     panels.unregister()
     operators.unregister()
     properties.unregister()
