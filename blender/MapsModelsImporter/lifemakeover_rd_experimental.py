@@ -47,22 +47,22 @@ try:
 except ModuleNotFoundError as err:
     print("Error: Can't find the RenderDoc Module.")
     print("sys.path contains the following paths:\n")
-    print(*sys.path, sep = "\n")
+    print(*sys.path, sep="\n")
     sys.exit(20)
 except ImportError as err:
     print(MSG_RD_IMPORT_FAILED)
     print("sys.platform: ", sys.platform)
-    print("Python version: ",sys.version)
-    print("err.name: ",err.name)
-    print("err.path: ",err.path)
-    print("Error Message: ", err,"\n")
+    print("Python version: ", sys.version)
+    print("err.name: ", err.name)
+    print("err.path: ", err.path)
+    print("Error Message: ", err, "\n")
     sys.exit(21)
 
 from meshdata import MeshData, makeMeshData
 from profiling import Timer, profiling_counters
 from rdutils import CaptureWrapper
 
-#单文件测试用变量
+# 单文件测试用变量
 # CAPTURE_FILE = 'D:\\Github\\example\\CapeTown-RD_1.13.rdc'
 # FILEPREFIX = 'D:\\Github\\example\\CapeTown-RD_1.13-xngd4ps\\CapeTown-RD_1.13-'
 # MAX_BLOCKS_STR = -1
@@ -76,13 +76,13 @@ _, CAPTURE_FILE, FILEPREFIX, MAX_BLOCKS_STR = sys.argv[:4]
 MAX_BLOCKS = int(MAX_BLOCKS_STR)
 
 
-
 def numpySave(array, file):
     np.array([array.ndim], dtype=np.int32).tofile(file)
     np.array(array.shape, dtype=np.int32).tofile(file)
     dt = array.dtype.descr[0][1][1:3].encode('ascii')
     file.write(dt)
     array.tofile(file)
+
 
 class CaptureScraper():
     def __init__(self, controller):
@@ -180,8 +180,7 @@ class CaptureScraper():
 
         return relevant_drawcalls, capture_type
 
-
-    def consolidateEvents(self, rootList, accumulator = []):
+    def consolidateEvents(self, rootList, accumulator=[]):
         for root in rootList:
             name = root.GetName(self.controller.GetStructuredFile())
             event = root
@@ -219,7 +218,7 @@ class CaptureScraper():
         for drawcallId, draw in enumerate(relevant_drawcalls[:max_drawcall]):
             # 重置计时器
             timer = Timer()
-            #print("Draw call: " + draw.name)
+            # print("Draw call: " + draw.name)
 
             # 设置帧事件
             controller.SetFrameEvent(draw.eventId, True)
@@ -236,7 +235,7 @@ class CaptureScraper():
             try:
                 # Position
                 m = meshes[0]
-                #m.fetchTriangle(controller)
+                # m.fetchTriangle(controller)
                 indices = m.fetchIndices(controller)
                 with open("{}{:05d}-indices.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
                     numpySave(indices, file)
@@ -250,7 +249,7 @@ class CaptureScraper():
                 if len(meshes) < 2:
                     raise Exception("No UV data")
                 m = meshes[2 if capture_type == "Google Earth" else 1]
-                #m.fetchTriangle(controller)
+                # m.fetchTriangle(controller)
                 unpacked = m.fetchData(controller)
                 with open("{}{:05d}-uv.bin".format(FILEPREFIX, drawcallId), 'wb') as file:
                     numpySave(unpacked, file)
@@ -300,9 +299,11 @@ class CaptureScraper():
         controller.SaveTexture(texsave, "{}{:05d}-texture.png".format(FILEPREFIX, drawcallId))
         profiling_counters["SaveTexture"].add_sample(timer)
 
+
 def main(controller):
     scraper = CaptureScraper(controller)
     scraper.run()
+
 
 if __name__ == "__main__":
     if 'pyrenderdoc' in globals():
@@ -311,4 +312,4 @@ if __name__ == "__main__":
         print("Loading capture from {}...".format(CAPTURE_FILE))
         with CaptureWrapper(CAPTURE_FILE) as controller:
             main(controller)
-    
+

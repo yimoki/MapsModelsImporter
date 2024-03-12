@@ -31,7 +31,9 @@ from .utils import getBinaryDir, makeTmpDir
 from .preferences import getPreferences
 
 SCRIPT_PATH = os.path.join(os.path.dirname(os.path.realpath(__file__)), "google_maps_rd.py")
-SCRIPT_PATH_EXP = os.path.join(os.path.dirname(os.path.realpath(__file__)), "google_maps_rd_experimental.py")
+# SCRIPT_PATH_EXP = os.path.join(os.path.dirname(os.path.realpath(__file__)), "google_maps_rd_experimental.py")
+# 测试
+SCRIPT_PATH_EXP = os.path.join(os.path.dirname(os.path.realpath(__file__)), "lifemakeover_rd_experimental.py")
 
 MSG_CONSOLE_DEBUG_OUTPUT = """\nPlease report to MapsModelsImporter developers providing the full console log with debug information.
 First turn on debug output by activating the "Debug Info"-checkbox under Edit > Preferences > Add-ons > MapsModelsImporter
@@ -79,7 +81,9 @@ def captureToFiles(context, filepath, prefix, max_blocks, use_experimental):
     os.environ["PYTHONPATH"] += os.pathsep + os.path.abspath(getBinaryDir())
     os.environ["PYTHONIOENCODING"] = "utf-8"
     os.environ["PATH"] += os.pathsep + os.path.join(python_home, "bin")
-    script_path = SCRIPT_PATH_EXP if use_experimental else SCRIPT_PATH
+    # script_path = SCRIPT_PATH_EXP if use_experimental else SCRIPT_PATH
+    # 测试
+    script_path = SCRIPT_PATH_EXP
     try:
         out = subprocess.check_output([python, script_path, filepath, prefix, str(max_blocks)], stderr=subprocess.STDOUT, text=True)
         if pref.debug_info:
@@ -371,4 +375,4 @@ def filesToBlender(context, prefix, max_blocks=200, use_experimental=False, glob
 def importCapture(context, filepath, max_blocks, use_experimental, pref):
     prefix = makeTmpDir(pref, filepath)
     captureToFiles(context, filepath, prefix, max_blocks, use_experimental)
-    # filesToBlender(context, prefix, max_blocks, use_experimental)
+    filesToBlender(context, prefix, max_blocks, use_experimental)
