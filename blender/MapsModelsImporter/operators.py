@@ -26,7 +26,8 @@ from bpy_extras.io_utils import ImportHelper
 from bpy.props import StringProperty, IntProperty, BoolProperty
 from bpy.types import Operator
 
-from .google_maps import importCapture, MapsModelsImportError
+# from .google_maps import importCapture, MapsModelsImportError
+from .lifemakeover import importCapture, MapsModelsImportError
 from .preferences import getPreferences
 
 class IMP_OP_GoogleMapsCapture(Operator, ImportHelper):

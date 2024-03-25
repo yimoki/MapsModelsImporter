@@ -243,21 +243,21 @@ def loadData(prefix, drawcall_id):
         #positions = pickle.load(file)
         positions = numpyLoad(file)
 
-    with open("{}{:05d}-uv.bin".format(prefix, drawcall_id), 'rb') as file:
-        #uvs = pickle.load(file)
-        uvs = numpyLoad(file)
+    # with open("{}{:05d}-uv.bin".format(prefix, drawcall_id), 'rb') as file:
+    #     #uvs = pickle.load(file)
+    #     uvs = numpyLoad(file)
+    #
+    # texture_filename = "{}{:05d}-texture.png".format(prefix, drawcall_id)
+    # if os.path.isfile(texture_filename):
+    #     img = bpy.data.images.load(texture_filename)
+    # else:
+    #     img = None
+    #
+    # with open("{}{:05d}-constants.bin".format(prefix, drawcall_id), 'rb') as file:
+    #     constants = pickle.load(file)
 
-    texture_filename = "{}{:05d}-texture.png".format(prefix, drawcall_id)
-    if os.path.isfile(texture_filename):
-        img = bpy.data.images.load(texture_filename)
-    else:
-        img = None
-
-    with open("{}{:05d}-constants.bin".format(prefix, drawcall_id), 'rb') as file:
-        constants = pickle.load(file)
-
-    return indices, positions, uvs, img, constants
-
+    # return indices, positions, uvs, img, constants
+    return indices, positions
 # -----------------------------------------------------------------------------
 
 def filesToBlender(context, prefix, max_blocks=200, use_experimental=False, globalScale=1.0/256.0):
@@ -281,7 +281,8 @@ def filesToBlender(context, prefix, max_blocks=200, use_experimental=False, glob
         timer = Timer()
         try:
             # 尝试加载数据
-            indices, positions, uvs, img, constants = loadData(prefix, drawcall_id)
+            # indices, positions, uvs, img, constants = loadData(prefix, drawcall_id)
+            indices, positions = loadData(prefix, drawcall_id) #test
         except FileNotFoundError as err:
             # 如果加载数据时出现FileNotFoundError异常，打印一条消息，然后drawcall_id加1，跳过当前循环
             print("Skipping ({})".format(err))
@@ -291,112 +292,113 @@ def filesToBlender(context, prefix, max_blocks=200, use_experimental=False, glob
         profiling_counters["loadData"].add_sample(timer)
 
         # 提取uniforms
-        uvOffsetScale, matrix, refMatrix = extractUniforms(constants, refMatrix)
-        # 如果uvOffsetScale为None，那么drawcall_id加1，跳过当前循环
-        if uvOffsetScale is None:
-            drawcall_id += 1
-            continue
+        # uvOffsetScale, matrix, refMatrix = extractUniforms(constants, refMatrix)
+        # # 如果uvOffsetScale为None，那么drawcall_id加1，跳过当前循环
+        # if uvOffsetScale is None:
+        #     drawcall_id += 1
+        #     continue
         
-        timer = Timer()
+        # timer = Timer()
         # Make triangles from triangle strip index buffer
         # 从三角形带索引缓冲区生成三角形
-        n = len(indices)
-        if constants["DrawCall"]["topology"] == 'TRIANGLE_STRIP':
-            # 如果拓扑是三角形带，那么生成三角形
-            tris = [ [ indices[i+j] for j in [[0,1,2],[0,2,1]][i%2] ] for i in range(n - 3)]
-            tris = [ t for t in tris if t[0] != t[1] and t[0] != t[2] and t[1] != t[2] ]
-        else:
-            # 否则，生成三角形
-            tris = [ [ indices[3*i+j] for j in range(3) ] for i in range(n//3) ]
+        # n = len(indices)
+        # if constants["DrawCall"]["topology"] == 'TRIANGLE_STRIP':
+        #     # 如果拓扑是三角形带，那么生成三角形
+        #     tris = [ [ indices[i+j] for j in [[0,1,2],[0,2,1]][i%2] ] for i in range(n - 3)]
+        #     tris = [ t for t in tris if t[0] != t[1] and t[0] != t[2] and t[1] != t[2] ]
+        # else:
+        #     # 否则，生成三角形
+        #     tris = [ [ indices[3*i+j] for j in range(3) ] for i in range(n//3) ]
+        # tris = [[indices[3 * i + j] for j in range(3)] for i in range(n // 3)] #test
 
         # 如果indices的长度为0，那么跳过当前循环
-        if len(indices) == 0:
-            continue
+        # if len(indices) == 0:
+        #     continue
 
         # 根据DrawCall的类型处理顶点数据
-        if constants["DrawCall"]["type"] == 'Google Maps':
-            verts = positions[:,:3] * 256.0 # [ [ p[0] * 256.0, p[1] * 256.0, p[2] * 256.0 ] for p in positions ]
-        elif constants["DrawCall"]["type"] == 'Mapy CZ':
-            # 处理Mapy CZ类型的顶点数据
-            raw_verts = positions[:,:3]
-            verts = []
-            globUniforms = constants['$Globals']
-            _uParamsSE = makeMatrix(globUniforms['_uParamsSE'])
-            # 对每个原始顶点进行处理
-            for v0 in raw_verts:
-                r0 = [0.0, 0.0, 0.0, 0.0]
-                r1 = np.zeros((3,), dtype=np.float32)
-                r2 = np.zeros((3,), dtype=np.float32)
-                r1[0] = v0[0] * _uParamsSE[3][0] + _uParamsSE[0][0]
-                r1[1] = v0[1] * _uParamsSE[0][1] + _uParamsSE[1][0]
-                r1[2] = (v0[2] * _uParamsSE[1][1] + _uParamsSE[2][0]) * _uParamsSE[3][3]
-                r0[1] = np.linalg.norm(r1)
-                r0[2] = r0[1] + 0.0001
-                r0[1] = r0[1] - _uParamsSE[2][3]
-                r0[2] = 1.0 / r0[2]
-                r1 *= r0[2]
-                r0[2] = min(max(r0[1], _uParamsSE[1][2]), _uParamsSE[3][2]) # clamp
-                r0[2] = (r0[2] - _uParamsSE[1][2]) * _uParamsSE[0][3] * _uParamsSE[1][3] + _uParamsSE[2][2]
-                r0[1] = r0[1] * r0[2] - r0[1]
-                r2[0] = v0[0] * _uParamsSE[3][0]
-                r2[1] = v0[1] * _uParamsSE[0][1]
-                r2[2] = v0[2] * _uParamsSE[1][1]
-                r2 += r1 * r0[1]
-                # 最后将处理后的顶点添加到verts列表中
-                verts.append(r2.tolist())
-        else:
-            verts = positions[:,:3] # [ [ p[0], p[1], p[2] ] for p in positions ]
+        # if constants["DrawCall"]["type"] == 'Google Maps':
+        #     verts = positions[:,:3] * 256.0 # [ [ p[0] * 256.0, p[1] * 256.0, p[2] * 256.0 ] for p in positions ]
+        # elif constants["DrawCall"]["type"] == 'Mapy CZ':
+        #     # 处理Mapy CZ类型的顶点数据
+        #     raw_verts = positions[:,:3]
+        #     verts = []
+        #     globUniforms = constants['$Globals']
+        #     _uParamsSE = makeMatrix(globUniforms['_uParamsSE'])
+        #     # 对每个原始顶点进行处理
+        #     for v0 in raw_verts:
+        #         r0 = [0.0, 0.0, 0.0, 0.0]
+        #         r1 = np.zeros((3,), dtype=np.float32)
+        #         r2 = np.zeros((3,), dtype=np.float32)
+        #         r1[0] = v0[0] * _uParamsSE[3][0] + _uParamsSE[0][0]
+        #         r1[1] = v0[1] * _uParamsSE[0][1] + _uParamsSE[1][0]
+        #         r1[2] = (v0[2] * _uParamsSE[1][1] + _uParamsSE[2][0]) * _uParamsSE[3][3]
+        #         r0[1] = np.linalg.norm(r1)
+        #         r0[2] = r0[1] + 0.0001
+        #         r0[1] = r0[1] - _uParamsSE[2][3]
+        #         r0[2] = 1.0 / r0[2]
+        #         r1 *= r0[2]
+        #         r0[2] = min(max(r0[1], _uParamsSE[1][2]), _uParamsSE[3][2]) # clamp
+        #         r0[2] = (r0[2] - _uParamsSE[1][2]) * _uParamsSE[0][3] * _uParamsSE[1][3] + _uParamsSE[2][2]
+        #         r0[1] = r0[1] * r0[2] - r0[1]
+        #         r2[0] = v0[0] * _uParamsSE[3][0]
+        #         r2[1] = v0[1] * _uParamsSE[0][1]
+        #         r2[2] = v0[2] * _uParamsSE[1][1]
+        #         r2 += r1 * r0[1]
+        #         # 最后将处理后的顶点添加到verts列表中
+        #         verts.append(r2.tolist())
+        # else:
+        #     verts = positions[:,:3] # [ [ p[0], p[1], p[2] ] for p in positions ]
 
         # 处理UV数据
-        [ou, ov, su, sv] = uvOffsetScale
-        if uvs is not None and uvs.shape[1] > 2: # len(uvs[0]) > 2:
-            uvs = uvs[:,:2] # [u[:2] for u in uvs]
+        # [ou, ov, su, sv] = uvOffsetScale
+        # if uvs is not None and uvs.shape[1] > 2: # len(uvs[0]) > 2:
+        #     uvs = uvs[:,:2] # [u[:2] for u in uvs]
 
         # 根据DrawCall的类型处理UV数据
-        if constants["DrawCall"]["type"] == 'Google Maps':
-            #uvs = [ [ (floor(u * 65535.0 + 0.5) + ou) * su, (floor(v * 65535.0 + 0.5) + ov) * sv ] for u, v in uvs ]
-            uvs = (uvs * 65535.0 + 0.5 + np.array([ou, ov])) * np.array([su, sv])
-        else:
-            #uvs = [ [ (u + ou) * su, (v + ov) * sv ] for u, v in uvs ]
-            uvs = (uvs + np.array([ou, ov])) * np.array([su, sv])
+        # if constants["DrawCall"]["type"] == 'Google Maps':
+        #     #uvs = [ [ (floor(u * 65535.0 + 0.5) + ou) * su, (floor(v * 65535.0 + 0.5) + ov) * sv ] for u, v in uvs ]
+        #     uvs = (uvs * 65535.0 + 0.5 + np.array([ou, ov])) * np.array([su, sv])
+        # else:
+        #     #uvs = [ [ (u + ou) * su, (v + ov) * sv ] for u, v in uvs ]
+        #     uvs = (uvs + np.array([ou, ov])) * np.array([su, sv])
 
         # 添加样本到```python
         # 添加样本到性能计数器
-        profiling_counters["processData"].add_sample(timer)
+        # profiling_counters["processData"].add_sample(timer)
 
         # 创建网格名称
-        mesh_name = "BuildingMesh-{:05d}".format(drawcall_id)
-        timer = Timer()
+        # mesh_name = "BuildingMesh-{:05d}".format(drawcall_id)
+        # timer = Timer()
         # 添加网格
-        obj = addMesh(context, mesh_name, verts, tris, uvs)
+        # obj = addMesh(context, mesh_name, verts, tris, uvs)
         # 添加样本到性能计数器
-        profiling_counters["addMesh"].add_sample(timer)
+        # profiling_counters["addMesh"].add_sample(timer)
         # 设置对象的世界矩阵
-        obj.matrix_world = matrix * globalScale
+        # obj.matrix_world = matrix * globalScale
 
         # 创建材质名称
-        mat_name = "BuildingMat-{:05d}".format(drawcall_id)
+        # mat_name = "BuildingMat-{:05d}".format(drawcall_id)
         # 添加图片材质
-        addImageMaterial(mat_name, obj, img)
+        # addImageMaterial(mat_name, obj, img)
 
         # drawcall_id加1，准备处理下一个drawcall
-        drawcall_id += 1
+        # drawcall_id += 1
 
     # Save reference matrix
     # 如果参考矩阵有效，保存参考矩阵
-    if refMatrix:
-        values = sum([list(v) for v in refMatrix], [])
-        context.scene.maps_models_importer_ref_matrix = values
-        context.scene.maps_models_importer_is_ref_matrix_valid = True
+    # if refMatrix:
+    #     values = sum([list(v) for v in refMatrix], [])
+    #     context.scene.maps_models_importer_ref_matrix = values
+    #     context.scene.maps_models_importer_is_ref_matrix_valid = True
 
     # 获取首选项
-    pref = getPreferences(context)
+    # pref = getPreferences(context)
 
     # 如果开启了debug_info，打印性能计数器的信息
-    if pref.debug_info:
-        print("Profiling counters:")
-        for key, counter in profiling_counters.items():
-            print(f" - {key}: {counter.summary()}")
+    # if pref.debug_info:
+    #     print("Profiling counters:")
+    #     for key, counter in profiling_counters.items():
+    #         print(f" - {key}: {counter.summary()}")
     # 返回None，表示没有错误
     return None # no error
 
@@ -405,4 +407,4 @@ def filesToBlender(context, prefix, max_blocks=200, use_experimental=False, glob
 def importCapture(context, filepath, max_blocks, use_experimental, pref):
     prefix = makeTmpDir(pref, filepath)
     captureToFiles(context, filepath, prefix, max_blocks, use_experimental)
-    filesToBlender(context, prefix, max_blocks, use_experimental)
+    # filesToBlender(context, prefix, max_blocks, use_experimental)
